@@ -41,22 +41,26 @@
 <div align="center">
 
 **插件主页面** —— 总开关、五项功能开关与智能功能
-![主页面](./assets/main.jpg)
 
-</div>
+<img src="./assets/main.jpg" alt="插件主页面" width="500"/>
 
-<div align="center">
+<br/><br/>
 
-| 插件面板全面汉化（230+ 条） | 命令面板全面双语（英文名 + 中文说明） |
-|:---:|:---:|
-| ![插件面板](./assets/plugin-list.png) | ![命令面板](./assets/command-menu.png) |
+**插件面板全面汉化** —— 230+ 插件的中文名称与说明
 
-</div>
+<img src="./assets/plugin-list.png" alt="插件面板汉化" width="640"/>
 
-<div align="center">
+<br/><br/>
+
+**命令面板全面双语** —— 英文命令名 + 中文说明
+
+<img src="./assets/command-menu.png" alt="命令面板双语" width="480"/>
+
+<br/><br/>
 
 **工作区写入权限汉化** —— `Read Only（只读）` / `Workspace Write（工作区写入）` / `Full access（完全访问）`
-![权限选择器](./assets/permission.png)
+
+<img src="./assets/permission.png" alt="权限选择器双语" width="400"/>
 
 </div>
 
