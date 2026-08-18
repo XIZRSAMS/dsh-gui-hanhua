@@ -2,161 +2,161 @@
 
 # 🌏 dsh-gui-hanhua
 
-### GUI Localization Plugin for DeepSeek Harness
+### DeepSeek Harness 界面信息汉化插件
 
-> **Language should never be a barrier for Agents.**
->
 > **语言永远不会成为 Agent 的门槛。**
+>
+> **Language should never be a barrier for Agents.**
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![Topic](https://img.shields.io/badge/topic-dsh--plugin-brightgreen)
-![Platform](https://img.shields.io/badge/platform-DeepSeek%20Harness-8A2BE2)
+![版本](https://img.shields.io/badge/version-1.0.0-blue)
+![许可](https://img.shields.io/badge/license-MIT-green)
+![话题](https://img.shields.io/badge/topic-dsh--plugin-brightgreen)
+![平台](https://img.shields.io/badge/platform-DeepSeek%20Harness-8A2BE2)
 
-**📌 Current version: v1.0.0**
+**📌 当前版本：v1.0.0**
 
-A **resident** localization plugin that makes the DeepSeek Harness interface speak your language — tool cards, plugin lists, command menus, permission selectors, all in Chinese (with English originals preserved).
+一款**常驻型**汉化插件，让 DeepSeek Harness 的界面开口说中文——AI 工具卡片、插件列表、命令面板、权限选项，全部显示中文（同时保留英文原名）。
 
-[🇨🇳 中文文档](./README.zh-CN.md)
+[English Docs](./README.en.md)
 
 </div>
 
 ---
 
-## ✨ Features
+## ✨ 功能特性
 
-| | Feature | Description |
+| | 功能 | 说明 |
 |---|---|---|
-| 🃏 | **Tool Card Localization** | AI tool-call cards in conversations show Chinese names + one-line descriptions (e.g. `pwsh` → 执行 PowerShell) |
-| 📦 | **Plugin List Localization** | Settings → Plugins shows Chinese names for 230+ plugins, English originals kept |
-| ⌨️ | **Command Menu Bilingual** | `/` menu shows **English command names + Chinese descriptions** — `/plan` → 计划模式：进入或退出计划模式（先规划后执行） |
-| 🔐 | **Permission Selector Bilingual** | `Read Only（只读）` / `Workspace Write（工作区写入）` / `Full access（完全访问）` |
-| 🎛️ | **Master Switch & Per-feature Switches** | One-click enable/disable everything, or each feature independently |
-| 💾 | **Persistence** | All dictionaries auto-save to `settings.yaml`, restored after restart |
-| 🤖 | **AI Auto-Localization** | One click opens a new conversation and lets the Agent analyze & translate any un-localized plugins automatically |
-| 🩺 | **AI Self-Check** | One click lets the Agent inspect plugin files, configs and registration, then auto-fix issues |
+| 🃏 | **工具卡片汉化** | 对话中 AI 工具调用卡片显示中文名 + 一句话说明（如 `pwsh` → 执行 PowerShell） |
+| 📦 | **插件列表汉化** | 设置 → 插件：230+ 插件的中文名称，保留英文原名 |
+| ⌨️ | **命令面板双语** | `/` 菜单显示**英文命令名 + 中文说明**——`/plan` → 计划模式：进入或退出计划模式（先规划后执行） |
+| 🔐 | **权限选择器双语** | `Read Only（只读）` / `Workspace Write（工作区写入）` / `Full access（完全访问）` |
+| 🎛️ | **总开关 + 分项开关** | 一键开启/关闭全部汉化，或按功能独立控制 |
+| 💾 | **配置持久化** | 字典自动保存到 `settings.yaml`，重启自动恢复 |
+| 🤖 | **AI 自动识别** | 一键打开新对话，让 Agent 自动分析并汉化未汉化的插件 |
+| 🩺 | **AI 自检** | 一键让 Agent 检查插件文件、配置与注册状态，自动修复问题 |
 
 ---
 
-## 📸 Screenshots
+## 📸 界面展示
 
 <div align="center">
 
-**Main Settings Page** — master switch, feature switches & smart functions
+**插件主页面** —— 总开关、五项功能开关与智能功能
 
-<img src="./assets/main.jpg" alt="Main settings page" width="500"/>
-
-<br/><br/>
-
-**Plugin list fully localized** — 230+ plugins with Chinese names & descriptions
-
-<img src="./assets/plugin-list.png" alt="Plugin list localized" width="640"/>
+<img src="./assets/main.jpg" alt="插件主页面" width="500"/>
 
 <br/><br/>
 
-**Command menu bilingual** — English command name + Chinese description
+**插件面板全面汉化** —— 230+ 插件的中文名称与说明
 
-<img src="./assets/command-menu.png" alt="Command menu bilingual" width="480"/>
+<img src="./assets/plugin-list.png" alt="插件面板汉化" width="640"/>
 
 <br/><br/>
 
-**Permission selector bilingual** — `Read Only（只读）` / `Workspace Write（工作区写入）` / `Full access（完全访问）`
+**命令面板全面双语** —— 英文命令名 + 中文说明
 
-<img src="./assets/permission.png" alt="Permission selector bilingual" width="400"/>
+<img src="./assets/command-menu.png" alt="命令面板双语" width="480"/>
+
+<br/><br/>
+
+**工作区写入权限汉化** —— `Read Only（只读）` / `Workspace Write（工作区写入）` / `Full access（完全访问）`
+
+<img src="./assets/permission.png" alt="权限选择器双语" width="400"/>
 
 </div>
 
 ---
 
-## 🚀 Installation
+## 🚀 安装方法
 
-1. Copy this directory to your DSH profile:
+1. 将本目录复制到 DSH profile 的 node_modules：
    ```powershell
-   # Example for the desktop profile:
+   # 以桌面版 profile 为例：
    Copy-Item .\dsh-gui-hanhua -Recurse "$env:USERPROFILE\.dsh\profiles\web-desktop\node_modules\"
    ```
-2. Register the plugin in `cordis.patch.yml` (both `web-desktop` and `web` profiles if you use both):
+2. 在 `cordis.patch.yml` 注册插件（web-desktop 与 web 两个 profile 都可用）：
    ```yaml
    - insert:
        - id: gui-hanhua
          name: 'dsh-gui-hanhua'
          disabled: false
    ```
-3. **Restart DeepSeek Harness** — the plugin loads automatically (resident plugin, no manual run needed).
-4. Open **Settings → GUI汉化设置** to manage everything.
+3. **重启 DeepSeek Harness** —— 插件自动加载（常驻插件，无需手动运行）。
+4. 打开 **设置 → GUI汉化设置** 即可管理全部功能。
 
-> 💡 No build step required: the client half is a hand-written bundle — refresh the page after client-side changes; restart after host-side changes.
+> 💡 无需构建：客户端为手写 bundle——client 端改动刷新页面即可，host 端改动需重启。
 
 ---
 
-## ⚙️ Configuration
+## ⚙️ 配置说明
 
-All configuration lives in the `gui-hanhua` section of `settings.yaml`:
+所有配置位于 `settings.yaml` 的 `gui-hanhua` 段：
 
-| Field | Description |
+| 字段 | 说明 |
 |---|---|
-| `flags.master` | Master switch (all effects) |
-| `flags.toolCards` | Tool card localization |
-| `flags.pluginList` | Plugin list localization |
-| `flags.commandMenu` | Command menu bilingual descriptions |
-| `flags.persist` | Persist changes to disk |
-| `tools` / `plugins` / `commands` | Translation dictionaries (`zh` / `desc` / `enabled` per entry) |
+| `flags.master` | 汉化功能总开关 |
+| `flags.toolCards` | 工具卡片汉化 |
+| `flags.pluginList` | 插件列表汉化 |
+| `flags.commandMenu` | 命令面板双语说明 |
+| `flags.persist` | 修改持久化到磁盘 |
+| `tools` / `plugins` / `commands` | 翻译字典（每条含 `zh` / `desc` / `enabled`） |
 
-You can edit everything from the GUI settings page — search, add, remove, enable/disable entries.
+全部可在设置页可视化编辑：搜索、新增、删除、启用/禁用。
 
 ---
 
-## 🧠 Smart Features (AI-powered)
+## 🧠 智能功能（AI 驱动）
 
-The settings page includes two AI-powered buttons that open a **new conversation** and auto-send a task prompt to the Agent:
+设置页提供两个 AI 按钮——点击后**打开新对话**并自动向 Agent 发送任务提示词：
 
-| Button | What the Agent does |
+| 按钮 | Agent 会做什么 |
 |---|---|
-| **自动识别 (Auto-Localize)** | Scans currently installed but un-localized plugins/tools, designs Chinese names & descriptions, writes them into `settings.yaml` — the plugin picks them up immediately |
-| **AI 自检 (Self-Check)** | Inspects registration status, file integrity, config completeness and conflicts; fixes what it can and reports the rest |
+| **自动识别** | 扫描当前已安装但未汉化的插件/工具，设计中文名与说明，写入 `settings.yaml`——插件即时生效 |
+| **AI 自检** | 检查注册状态、文件完整性、配置完整性与冲突；能修复的直接修复，其余给出建议 |
 
-> ⚠️ Both features consume **tokens**, and file writes require your in-session approval.
-
----
-
-## 🔧 How It Works
-
-- **Client half** (`client.js`): hand-written ModuleLoader bundle — registers settings page, tool-card/plugin-list/command-row slots, and the permission dictionary.
-- **Host half** (`index.js`): registers the `gui-hanhua` settings namespace, persists dictionaries, and injects a read-only bilingual hook into `dsh-commands` (command descriptions) via `vendor/dsh-commands-hanhua.js`.
-- **Safety-first design**: every patch is idempotent, fails silently (logs a warning), and behaves exactly like the original when the plugin is not loaded. The plugin never breaks the GUI even if it errors by itself.
+> ⚠️ 两种功能都会**消耗 token**；写文件时需您在场确认授权。
 
 ---
 
-## ❓ FAQ
+## 🔧 工作原理
 
-- **Cards not localized?** Check the master switch and the corresponding feature switch, and make sure the entry exists in the dictionary and is enabled.
-- **Settings entry missing?** Check `cordis.patch.yml` for `disabled: true` on the `gui-hanhua` row.
-- **Command descriptions not showing?** Make sure the **命令面板汉化** switch is on and the command exists in the `commands` dictionary.
-- **Garbled text?** Usually an encoding issue — run **AI 自检** and let the Agent inspect and fix the affected files.
-
----
-
-## 🤝 Contributing
-
-This project is designed for easy modification:
-
-- All default dictionaries (`DEFAULT_TOOLS` / `DEFAULT_COMMANDS` / `DEFAULT_PLUGINS`) are defined in one place.
-- AI task prompts (`buildAutoPrompt` / `buildSelfCheckPrompt`) are easy to customize.
-- All UI copy lives inline in the client bundle — no external assets required.
-- Deployment is just copy + register; no build step.
-
-Feel free to open issues and pull requests!
+- **客户端**（`client.js`）：手写 ModuleLoader bundle——注册设置页、工具卡片/插件列表/命令执行行槽位、权限双语字典。
+- **宿主端**（`index.js`）：注册 `gui-hanhua` 设置命名空间、持久化字典，并通过 `vendor/dsh-commands-hanhua.js` 向 `dsh-commands` 注入只读双语钩子（命令说明）。
+- **安全优先**：所有补丁幂等、失败仅告警、插件未加载时行为与原版完全一致；插件自身出错也绝不影响 GUI 其他部分。
 
 ---
 
-## 📄 License
+## ❓ 常见问题
+
+- **卡片没汉化？** 确认总开关与对应分开关已开启，且字典中存在该条目并已启用。
+- **设置入口不见了？** 检查 `cordis.patch.yml` 中 gui-hanhua 行是否有 `disabled: true`。
+- **命令说明不显示？** 确认「命令面板汉化」开关开启，且字典中存在该命令。
+- **界面乱码？** 多为文件编码问题——运行「AI 自检」，让 Agent 检查并修复相关文件。
+
+---
+
+## 🤝 参与贡献
+
+本项目为二次开发友好设计：
+
+- 默认字典（`DEFAULT_TOOLS` / `DEFAULT_COMMANDS` / `DEFAULT_PLUGINS`）集中定义，一处修改全局生效；
+- AI 任务提示词（`buildAutoPrompt` / `buildSelfCheckPrompt`）可自由定制；
+- 界面文案全部内联，无外部资源依赖；
+- 部署即复制 + 注册，无需构建。
+
+欢迎提交 Issue 与 Pull Request！
+
+---
+
+## 📄 开源许可
 
 [MIT](./LICENSE) © 2026
 
 <div align="center">
 
-**语言不会是 Agent 的门槛** · Language should never be a barrier for Agents
+**语言永远不会成为 Agent 的门槛**
 
-**🚀 More updates are on the way — 还会持续更新的！**
+**🚀 还会持续更新的！**
 
 </div>
