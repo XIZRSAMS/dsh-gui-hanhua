@@ -10,6 +10,7 @@
     "./package.json": "./package.json"
   },
   "dsh": {
+    "bundle": { "patch": "./cordis.patch.yml" },
     "client": {
       "platform": "web"
     }
@@ -17,7 +18,8 @@
   "files": [
     "index.js",
     "client.js",
-    "vendor"
+    "vendor",
+    "cordis.patch.yml"
   ],
   "license": "MIT"
 }
