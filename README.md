@@ -13,6 +13,8 @@
 ![Topic](https://img.shields.io/badge/topic-dsh--plugin-brightgreen)
 ![Platform](https://img.shields.io/badge/platform-DeepSeek%20Harness-8A2BE2)
 
+**📌 Current version: v1.0.0**
+
 A **resident** localization plugin that makes the DeepSeek Harness interface speak your language — tool cards, plugin lists, command menus, permission selectors, all in Chinese (with English originals preserved).
 
 [🇨🇳 中文文档](./README.zh-CN.md)
@@ -154,5 +156,7 @@ Feel free to open issues and pull requests!
 <div align="center">
 
 **语言不会是 Agent 的门槛** · Language should never be a barrier for Agents
+
+**🚀 More updates are on the way — 还会持续更新的！**
 
 </div>
