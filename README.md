@@ -41,22 +41,26 @@ A **resident** localization plugin that makes the DeepSeek Harness interface spe
 <div align="center">
 
 **Main Settings Page** — master switch, feature switches & smart functions
-![Main page](./assets/main.jpg)
 
-</div>
+<img src="./assets/main.jpg" alt="Main settings page" width="500"/>
 
-<div align="center">
+<br/><br/>
 
-| Plugin list fully localized (230+ entries) | Command menu bilingual (English name + Chinese description) |
-|:---:|:---:|
-| ![Plugin list](./assets/plugin-list.png) | ![Command menu](./assets/command-menu.png) |
+**Plugin list fully localized** — 230+ plugins with Chinese names & descriptions
 
-</div>
+<img src="./assets/plugin-list.png" alt="Plugin list localized" width="640"/>
 
-<div align="center">
+<br/><br/>
+
+**Command menu bilingual** — English command name + Chinese description
+
+<img src="./assets/command-menu.png" alt="Command menu bilingual" width="480"/>
+
+<br/><br/>
 
 **Permission selector bilingual** — `Read Only（只读）` / `Workspace Write（工作区写入）` / `Full access（完全访问）`
-![Permission selector](./assets/permission.png)
+
+<img src="./assets/permission.png" alt="Permission selector bilingual" width="400"/>
 
 </div>
 
