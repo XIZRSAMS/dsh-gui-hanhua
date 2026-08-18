@@ -13,6 +13,8 @@
 ![话题](https://img.shields.io/badge/topic-dsh--plugin-brightgreen)
 ![平台](https://img.shields.io/badge/platform-DeepSeek%20Harness-8A2BE2)
 
+**📌 当前版本：v1.0.0**
+
 一款**常驻型**汉化插件，让 DeepSeek Harness 的界面开口说中文——AI 工具卡片、插件列表、命令面板、权限选项，全部显示中文（同时保留英文原名）。
 
 [English Docs](./README.md)
@@ -154,5 +156,7 @@
 <div align="center">
 
 **语言永远不会成为 Agent 的门槛**
+
+**🚀 还会持续更新的！**
 
 </div>
