@@ -1,0 +1,23 @@
+{
+  "name": "dsh-gui-hanhua",
+  "version": "1.0.0",
+  "description": "GUI可视信息汉化 V1.0 —— DeepSeek Harness 界面信息汉化插件（常驻版）",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web"
+    }
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "vendor"
+  ],
+  "license": "MIT"
+}
