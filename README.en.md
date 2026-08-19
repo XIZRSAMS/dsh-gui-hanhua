@@ -64,6 +64,12 @@ A **resident** localization plugin that makes the DeepSeek Harness interface spe
 
 <img src="./assets/permission.png" alt="Permission selector bilingual" width="400"/>
 
+<br/><br/>
+
+**Agent preset localization** — preset names & descriptions in Chinese (`anchored-standard` → 锚定标准模式（实验）)
+
+<img src="./assets/agent-preset.png" alt="Agent preset localization" width="480"/>
+
 </div>
 
 ---
