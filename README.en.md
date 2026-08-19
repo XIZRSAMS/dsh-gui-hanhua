@@ -159,6 +159,31 @@ Feel free to open issues and pull requests!
 
 [MIT](./LICENSE) © 2026
 
+---
+
+## 📝 Changelog
+
+### v1.1.0 (2026-08-19) — Current
+
+**New features**:
+- **Agent preset localization**: preset names & descriptions shown in Chinese (with a dedicated switch; dictionary maintainable under the `gui-hanhua.presets` section of `settings.yaml`)
+- **AI Auto-Localize / Self-Check now cover Agent presets**: automatically scans `~/.dsh/.agent-presets/` and localizes un-localized presets
+- **Version check & auto-update**: startup/manual comparison against the GitHub repo (old / current / ahead), auto-prompt on new version, then auto-download & overwrite plugin files (with a `.bak` backup before overwrite)
+
+**Bug fixes**:
+- Removed the unsupported `z.object().partial()` (which caused plugin load failure and dsh startup crash)
+- Schema construction now has a fallback: any failure degrades to a lenient structure, so the plugin can never crash the GUI again
+- Generalized hard-coded user paths in AI task prompts (privacy fix)
+
+### v1.0.0 (2026-08-18)
+
+**New features**:
+- Tool card / plugin list / command menu / permission selector localization
+- Master switch + per-feature switches + config persistence
+- Visual dictionary editing (search / add / remove / enable-disable / import-export / reset)
+- Smart features: AI Auto-Localize (localizes un-localized plugins) & AI Self-Check (inspects and repairs plugin issues)
+- Resident loading (web-desktop / web dual-profile support)
+
 <div align="center">
 
 **语言不会是 Agent 的门槛** · Language should never be a barrier for Agents
