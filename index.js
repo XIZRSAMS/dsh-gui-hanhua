@@ -1,5 +1,5 @@
 /**
- * dsh-gui-hanhua — GUI可视信息汉化 V1.0（常驻版）Host 半区。
+ * dsh-gui-hanhua — GUI可视信息汉化 V1.1（常驻版）Host 半区。
  *
  * 以宿主插件形式常驻：应用启动时自动加载，配置经 settings 服务持久化到
  * settings.yaml（与其他插件一致），重启后配置与插件本体都自动恢复。
@@ -16,7 +16,7 @@
  */
 import z from "@deepseek-ai/schemastery";
 import { settingsNamespace } from "@deepseek-ai/dsh-settings";
-import { writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,13 +26,13 @@ import { ensureCommandsHanhuaPatched } from "./vendor/dsh-commands-hanhua.js";
 /** Cordis 插件名。 */
 export const name = "gui-hanhua";
 /** 依赖的宿主服务。 */
-export const inject = ["settings"];
+export const inject = ["settings", "timer"];
 
 /** 设置命名空间（settings.yaml 中的键）。 */
 const NS = settingsNamespace("gui-hanhua");
 
 // ================= 默认翻译字典（纯数据，用户可在设置页覆盖） =================
-const DEFAULT_FLAGS = { master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true };
+const DEFAULT_FLAGS = { master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true, agentPreset: true };
 
 const DEFAULT_TOOLS = {
   read: { zh: "读取文件", desc: "读取文本文件内容，支持指定起始行与行数。", enabled: true },
@@ -279,20 +279,69 @@ const DEFAULT_PLUGINS = {
   dsh: { zh: "DSH 主包", desc: "DeepSeek Harness 主包。", enabled: true }
 };
 
+// ================= 默认 Agent 预设汉化字典（settings.yaml 的 gui-hanhua.presets 段） =================
+const DEFAULT_PRESETS = {
+  "anchored-standard": { zh: "锚定标准模式（实验）", desc: "以极简预设的真实工具对启动（持久 bash + str_replace_editor），首个持久工具调用或回复后解锁完整标准能力。", enabled: true },
+  "zero-anchored-standard": { zh: "零锚定标准模式（实验）", desc: "注入一轮零工具锚定轮（固定用户消息），从下一轮起解锁完整标准工具。", enabled: true },
+  "router-standard": { zh: "路由标准模式（实验）", desc: "按任务类型路由——修复走计划（spec），构建走执行（doer）；首个工具调用后解锁完整标准工具。", enabled: true },
+  "v4-flash-godmode-opencode-go": { zh: "Flash 路由（opencode-go）", desc: "Flash 专属路由：按任务类型（构建/修复）内部路由，neutral 人设 + 分类引导 + 回顾锚 + 反跑题锚。", enabled: true },
+  "warmupbetter": { zh: "预热增强", desc: "预热轮要求模型尽可能长时间预热思维链，并在正式提示词到达前列出自提醒。", enabled: true },
+  "warmupbetter-replay": { zh: "预热增强·回放", desc: "第一轮的思维链与回复回放已记录的预热输出，下一轮以完整标准能力运行。", enabled: true },
+  "whoami-standard": { zh: "Whoami 标准（实验）", desc: "在空工具面上播种一轮固定的「你是谁」自我介绍，用户首条真实消息后解锁常驻完整能力。", enabled: true },
+  "minimal-gitbash": { zh: "极简模式（Git Bash）", desc: "极简模式的 Windows 变体：bash 映射到 Git for Windows 的 bash（MSYS）。", enabled: true },
+  "minimal-win": { zh: "极简模式（Windows）", desc: "官方极简模式的 Windows 版：bash 替换为 PowerShell，pwsh + str_replace_editor 双工具。", enabled: true }
+};
+
 // ================= settings schema（磁盘持久化） =================
 const entry = z.object({ zh: z.string(), desc: z.string(), enabled: z.boolean() });
-const schema = z.object({
-  flags: z.object({
-    master: z.boolean().default(true),
-    persist: z.boolean().default(true),
-    toolCards: z.boolean().default(true),
-    pluginList: z.boolean().default(true),
-    commandMenu: z.boolean().default(true)
-  }),
-  tools: z.dict(entry),
-  plugins: z.dict(entry),
-  commands: z.dict(entry)
-});
+// schema 构建绝不抛错：模块加载期任何异常都会导致宿主插件加载失败 → dsh 启动崩溃。
+// 注意：schemastery 版本不支持 .partial()（会导致 z.object(...).partial is not a function）。
+let schema;
+try {
+  schema = z.object({
+    flags: z.object({
+      master: z.boolean().default(true),
+      persist: z.boolean().default(true),
+      toolCards: z.boolean().default(true),
+      pluginList: z.boolean().default(true),
+      commandMenu: z.boolean().default(true),
+      agentPreset: z.boolean().default(true)
+    }),
+    tools: z.dict(entry),
+    plugins: z.dict(entry),
+    commands: z.dict(entry),
+    presets: z.dict(entry),
+    // 版本更新检查状态（host 写入；client 读取展示并触发确认）。
+    // 字段全部带默认值：缺失时自动填充，保证任意部分写入都可通过校验。
+    updateCheck: z.object({
+      status: z.string().default(""),
+      remoteVersion: z.string().default(""),
+      localVersion: z.string().default(""),
+      checkedAt: z.number().default(0),
+      message: z.string().default(""),
+      trigger: z.number().default(0),
+      confirmAt: z.number().default(0),
+      confirmVersion: z.string().default("")
+    })
+  });
+} catch (error) {
+  // 兜底：任何 schema 构建失败都退回宽松结构，保证插件始终可加载、GUI 永不因本插件崩溃
+  console.warn("[gui-hanhua] schema 构建失败，使用宽松兜底结构: " + String(error?.message ?? error));
+  schema = z.object({
+    flags: z.object({
+      master: z.boolean().default(true),
+      persist: z.boolean().default(true),
+      toolCards: z.boolean().default(true),
+      pluginList: z.boolean().default(true),
+      commandMenu: z.boolean().default(true),
+      agentPreset: z.boolean().default(true)
+    }),
+    tools: z.dict(entry),
+    plugins: z.dict(entry),
+    commands: z.dict(entry),
+    presets: z.dict(entry)
+  });
+}
 
 // 构建命令双语字典（命令名保持英文，只映射中文描述/参数提示）
 function buildCommandDict(commands) {
@@ -316,6 +365,100 @@ function buildCommandDict(commands) {
 // 插件位于 profiles/<profile>/node_modules/dsh-gui-hanhua/ → 向上三级即 profiles 根
 const __pluginDir = dirname(fileURLToPath(import.meta.url));
 const COMMAND_DICT_FILE = join(__pluginDir, "..", "..", "..", "gui-hanhua-command-dict.json");
+
+// ================= 版本检查与自动更新 =================
+// 数据源：GitHub 仓库 raw 文件；版本号以仓库 package.json 的 version 为准。
+// 发布流程：修改代码 → 提升 package.json 的 version → 推送 GitHub → 用户端自动识别并更新。
+const UPDATE_SOURCE = "https://raw.githubusercontent.com/XIZRSAMS/dsh-gui-hanhua/main";
+const UPDATE_FILES = ["client.js", "index.js", "package.json", "vendor/dsh-commands-hanhua.js", "vendor/dsh-settings-expose.js"];
+const PROFILES_ROOT = join(__pluginDir, "..", "..", "..");
+const PROFILE_TARGETS = ["web-desktop", "web"].map((p) => join(PROFILES_ROOT, p, "node_modules", "dsh-gui-hanhua"));
+
+// 本地版本（读部署目录的 package.json，与 GitHub 仓库同步维护）
+function readLocalVersion() {
+  try {
+    const pkg = JSON.parse(readFileSync(join(__pluginDir, "package.json"), "utf8"));
+    return typeof pkg.version === "string" && pkg.version ? pkg.version : "0.0.0";
+  } catch { return "0.0.0"; }
+}
+// semver 比较：a<b → -1；a>b → 1；相等 → 0
+function compareVersions(a, b) {
+  const pa = String(a || "0").split(".").map(Number);
+  const pb = String(b || "0").split(".").map(Number);
+  const len = Math.max(pa.length, pb.length);
+  for (let i = 0; i < len; i++) {
+    const x = pa[i] || 0, y = pb[i] || 0;
+    if (x < y) return -1;
+    if (x > y) return 1;
+  }
+  return 0;
+}
+// 下载 GitHub raw 文件（文本）
+async function downloadRaw(path) {
+  const res = await fetch(UPDATE_SOURCE + "/" + path);
+  if (!res.ok) throw new Error("下载 " + path + " 失败: HTTP " + res.status);
+  const text = await res.text();
+  if (!text || text.length < 100) throw new Error("下载内容为空: " + path);
+  return text;
+}
+// 检查更新：对比远程版本，把状态写入 settings（client 读取展示）
+async function checkForUpdate(ctx) {
+  try {
+    const pkgText = await downloadRaw("package.json");
+    const pkg = JSON.parse(pkgText);
+    const remote = typeof pkg.version === "string" ? pkg.version : "0.0.0";
+    const local = readLocalVersion();
+    const cmp = compareVersions(local, remote);
+    const status = cmp < 0 ? "update-available" : cmp > 0 ? "ahead" : "current";
+    await ctx.settings.update(NS, {
+      updateCheck: {
+        status, remoteVersion: remote, localVersion: local, checkedAt: Date.now(),
+        message: cmp < 0 ? "发现新版本" : cmp > 0 ? "本地版本领先于仓库" : "已是最新版本"
+      }
+    });
+  } catch (error) {
+    await ctx.settings.update(NS, {
+      updateCheck: { status: "check-failed", checkedAt: Date.now(), message: String(error?.message ?? error) }
+    });
+  }
+}
+// 执行更新：下载全部运行文件 → 校验 → 备份 → 覆盖两个 profile
+async function performUpdate(ctx, targetVersion) {
+  try {
+    await ctx.settings.update(NS, {
+      updateCheck: { status: "updating", remoteVersion: targetVersion, localVersion: readLocalVersion(), checkedAt: Date.now(), message: "正在下载并应用更新…" }
+    });
+    const downloads = {};
+    for (const f of UPDATE_FILES) downloads[f] = await downloadRaw(f);
+    // 校验：package.json 可解析且带 version；核心文件有足够内容
+    const pkg = JSON.parse(downloads["package.json"]);
+    if (!pkg.version) throw new Error("远程 package.json 缺少 version 字段");
+    if (downloads["client.js"].length < 1000 || downloads["index.js"].length < 1000) throw new Error("核心文件下载不完整");
+    // 备份 + 覆盖两个 profile
+    let covered = 0;
+    for (const base of PROFILE_TARGETS) {
+      if (!existsSync(base)) continue;
+      for (const f of UPDATE_FILES) {
+        const full = join(base, f);
+        try { if (existsSync(full)) copyFileSync(full, full + ".bak"); } catch { /* 备份失败不阻断 */ }
+        mkdirSync(dirname(full), { recursive: true });
+        writeFileSync(full, downloads[f], "utf8");
+      }
+      covered++;
+    }
+    if (covered === 0) throw new Error("未找到可更新的部署目录（两个 profile 均不存在）");
+    await ctx.settings.update(NS, {
+      updateCheck: {
+        status: "updated", remoteVersion: pkg.version, localVersion: pkg.version, checkedAt: Date.now(),
+        message: "更新完成（v" + pkg.version + "），请重启应用生效"
+      }
+    });
+  } catch (error) {
+    await ctx.settings.update(NS, {
+      updateCheck: { status: "update-failed", checkedAt: Date.now(), message: "更新失败：" + String(error?.message ?? error) }
+    });
+  }
+}
 
 // 首次读取时写入默认字典（settings 文档为空时）
 export function apply(ctx) {
@@ -360,7 +503,23 @@ export function apply(ctx) {
     }
   };
   refreshCommandDict();
-  reg.watch(function () { refreshCommandDict(); });
+  // 版本更新联动：client 写 updateCheck.trigger（请求检查）或 confirmAt/confirmVersion（确认更新）时处理
+  let lastTrigger = 0, lastConfirmAt = 0;
+  const handleUpdateCheck = function () {
+    try {
+      const doc = ctx.settings.get(NS) ?? {};
+      const uc = (doc.updateCheck && typeof doc.updateCheck === "object") ? doc.updateCheck : {};
+      if (typeof uc.trigger === "number" && uc.trigger > 0 && uc.trigger !== lastTrigger) {
+        lastTrigger = uc.trigger;
+        checkForUpdate(ctx);
+      }
+      if (typeof uc.confirmAt === "number" && uc.confirmAt > 0 && uc.confirmAt !== lastConfirmAt) {
+        lastConfirmAt = uc.confirmAt;
+        if (typeof uc.confirmVersion === "string" && uc.confirmVersion) performUpdate(ctx, uc.confirmVersion);
+      }
+    } catch (e) { ctx.logger.warn?.("[gui-hanhua] 更新检查处理失败: " + String(e?.message ?? e)); }
+  };
+  reg.watch(function () { refreshCommandDict(); handleUpdateCheck(); });
   // 初始化用 promise 链（不返回 Promise 作为 disposer），任何失败只告警，绝不抛给框架
   ctx.effect(function () {
     Promise.resolve()
@@ -371,13 +530,20 @@ export function apply(ctx) {
         const tools = (doc.tools && typeof doc.tools === "object" && Object.keys(doc.tools).length > 0) ? doc.tools : DEFAULT_TOOLS;
         const plugins = (doc.plugins && typeof doc.plugins === "object" && Object.keys(doc.plugins).length > 0) ? doc.plugins : DEFAULT_PLUGINS;
         const commands = (doc.commands && typeof doc.commands === "object" && Object.keys(doc.commands).length > 0) ? doc.commands : DEFAULT_COMMANDS;
+        const presets = (doc.presets && typeof doc.presets === "object" && Object.keys(doc.presets).length > 0) ? doc.presets : DEFAULT_PRESETS;
         return ctx.settings.update(NS, {
-          flags: { master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true, ...flags },
-          tools, plugins, commands
+          flags: { master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true, agentPreset: true, ...flags },
+          tools, plugins, commands, presets
         });
       })
       .catch(function (error) {
         ctx.logger.warn?.("[gui-hanhua] 初始化默认配置失败: " + String(error?.message ?? error));
       });
+    // 启动后自动检查一次更新（延迟等待 settings 就绪；失败仅告警不影响启动）
+    try {
+      ctx.effect(function () {
+        return ctx.timeout(function () { checkForUpdate(ctx); }, 6000);
+      }, "gui-hanhua: 启动版本检查");
+    } catch (e) { ctx.logger.warn?.("[gui-hanhua] 启动版本检查调度失败: " + String(e?.message ?? e)); }
   }, "gui-hanhua: 默认配置初始化");
 }
