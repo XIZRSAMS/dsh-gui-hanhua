@@ -1,5 +1,5 @@
 /**
- * dsh-gui-hanhua — GUI可视信息汉化 V1.0（常驻版）浏览器半区。
+ * dsh-gui-hanhua — GUI可视信息汉化 V1.1（常驻版）浏览器半区。
  * Hand-written ModuleLoader bundle（与 dsh-tool-vision 相同模式，无需构建步骤）。
  *
  * ============ 开源扩展指南（欢迎二次开发）============
@@ -470,6 +470,8 @@ var DEFAULT_PLUGINS = {
       var tools = o.tools && typeof o.tools === "object" && !Array.isArray(o.tools) ? o.tools : {};
       var plugins = o.plugins && typeof o.plugins === "object" && !Array.isArray(o.plugins) ? o.plugins : {};
       var commands = o.commands && typeof o.commands === "object" && !Array.isArray(o.commands) ? o.commands : {};
+      var presets = o.presets && typeof o.presets === "object" && !Array.isArray(o.presets) ? o.presets : {};
+      var updateCheck = o.updateCheck && typeof o.updateCheck === "object" && !Array.isArray(o.updateCheck) ? o.updateCheck : {};
       // useDefaults：空/残缺部分用内置默认字典兜底——启动竞态时空快照也绝不产生空 store，
       // 更不会让一次用户修改把磁盘上的完整字典覆盖成空。
       if (useDefaults) {
@@ -483,11 +485,14 @@ var DEFAULT_PLUGINS = {
           persist: flags.persist === undefined ? true : !!flags.persist,
           toolCards: flags.toolCards === undefined ? true : !!flags.toolCards,
           pluginList: flags.pluginList === undefined ? true : !!flags.pluginList,
-          commandMenu: flags.commandMenu === undefined ? true : !!flags.commandMenu
+          commandMenu: flags.commandMenu === undefined ? true : !!flags.commandMenu,
+          agentPreset: flags.agentPreset === undefined ? true : !!flags.agentPreset
         },
         tools: tools,
         plugins: plugins,
-        commands: commands
+        commands: commands,
+        presets: presets,
+        updateCheck: updateCheck
       };
     }
     function createStore() {
@@ -731,7 +736,7 @@ var DEFAULT_PLUGINS = {
           exists ? h("span", { className: "__gh_hint-inline" }, "该标识已存在，请直接编辑下方条目") : null));
     }
     function SettingsSection(props) {
-      var s = props.store, applyPatch = props.applyPatch, load = props.listInventory, runAiTask = props.runAiTask;
+      var s = props.store, applyPatch = props.applyPatch, load = props.listInventory, runAiTask = props.runAiTask, checkUpdate = props.checkUpdate, confirmUpdate = props.confirmUpdate;
       var cfg = useConfig(s);
       var ts = react.useState("overview");
       var tab = ts[0], setTab = ts[1];
@@ -741,6 +746,28 @@ var DEFAULT_PLUGINS = {
       var inv = is[0], setInv = is[1];
       var as = react.useState("");
       var aiMsg = as[0], setAiMsg = as[1];
+      // 版本更新状态文本（host 写入 updateCheck，经 store 同步到这里）
+      var uc = (cfg.updateCheck && typeof cfg.updateCheck === "object") ? cfg.updateCheck : {};
+      var ucStatus = uc.status || "";
+      var ucText = "";
+      if (ucStatus === "current") ucText = "✅ 已是最新版本（v" + (uc.localVersion || "?") + "）";
+      else if (ucStatus === "update-available") ucText = "🚀 发现新版本 v" + (uc.remoteVersion || "?") + "（当前 v" + (uc.localVersion || "?") + "）——点击「立即更新」自动下载安装";
+      else if (ucStatus === "ahead") ucText = "ℹ️ 本地版本（v" + (uc.localVersion || "?") + "）领先于仓库";
+      else if (ucStatus === "updating") ucText = "⏳ 正在下载并应用更新…";
+      else if (ucStatus === "updated") ucText = "🎉 " + (uc.message || "更新完成，请重启应用生效");
+      else if (ucStatus === "check-failed" || ucStatus === "update-failed") ucText = "⚠️ " + (uc.message || "操作失败，请稍后重试");
+      else ucText = "版本检查未运行（点击「检查更新」手动触发）";
+      // 自动弹窗：检测到新版本时确认一次（session 级防重复）
+      react.useEffect(function () {
+        if (ucStatus === "update-available" && uc.remoteVersion) {
+          try {
+            if (window.__ghUpdatePrompted) return;
+            window.__ghUpdatePrompted = true;
+            var ok = window.confirm("发现新版本 v" + uc.remoteVersion + "（当前 v" + (uc.localVersion || "?") + "）\n\n是否立即更新？\n更新将自动下载并覆盖插件文件，完成后需重启应用生效。");
+            if (ok && confirmUpdate) confirmUpdate(uc.remoteVersion);
+          } catch (e) { /* 弹窗被环境禁用时静默 */ }
+        }
+      }, [ucStatus, uc.remoteVersion]);
       react.useEffect(function () {
         var current = true;
         load().then(function (r) { if (current) setInv(r && r.ok ? r.entries : null); }, function () { if (current) setInv(null); });
@@ -765,7 +792,7 @@ var DEFAULT_PLUGINS = {
       var TABS = [["overview", "概览"], ["tools", "工具汉化"], ["commands", "命令汉化"], ["plugins", "插件汉化"], ["data", "数据"], ["help", "帮助"]];
       return h("div", { className: "__gh_settings" },
         h("div", { className: "__gh_hero" },
-          h("div", { className: "__gh_hero-title" }, "GUI可视信息汉化 V1.0"),
+          h("div", { className: "__gh_hero-title" }, "GUI可视信息汉化 V" + (uc.localVersion || "1.1.0")),
           h("div", { className: "__gh_hero-sub" }, "DeepSeek Harness 界面信息汉化 · 常驻版（设置自动保存到磁盘）")),
         h("div", { className: "__gh_tabs" }, TABS.map(function (t) {
           return h("button", { key: t[0], type: "button", className: "__gh_tab" + (tab === t[0] ? " is-active" : ""), onClick: function () { setTab(t[0]); } }, t[1]);
@@ -781,6 +808,7 @@ var DEFAULT_PLUGINS = {
             h(SwitchRow, { checked: !!cfg.flags.toolCards, onChange: function (v) { applyPatch({ flags: { toolCards: v } }); }, label: "工具卡片汉化", hint: "对话中 AI 工具调用卡片显示中文名称与说明" }),
             h(SwitchRow, { checked: !!cfg.flags.pluginList, onChange: function (v) { applyPatch({ flags: { pluginList: v } }); }, label: "插件列表汉化", hint: "设置 → 插件 → 插件列表显示中文名称" }),
             h(SwitchRow, { checked: !!cfg.flags.commandMenu, onChange: function (v) { applyPatch({ flags: { commandMenu: v } }); }, label: "命令面板汉化", hint: "/ 命令菜单中每条命令显示中文说明（命令名保持英文，执行不受影响）" }),
+            h(SwitchRow, { checked: !!cfg.flags.agentPreset, onChange: function (v) { applyPatch({ flags: { agentPreset: v } }); }, label: "Agent预设汉化", hint: "新会话页与设置中的 Agent 预设显示中文名称与说明（字典可在 settings.yaml 的 gui-hanhua.presets 段维护，AI 自动识别也会扫描预设）" }),
             h(SwitchRow, { checked: !!cfg.flags.persist, onChange: function (v) { applyPatch({ flags: { persist: v } }); }, label: "配置持久化", hint: "修改自动保存到磁盘 settings.yaml；关闭后修改仅本次会话生效" })),
           // ===== AI 智能功能（自动识别 / AI 自检）=====
           // 自动识别：让 AI 分析当前未汉化的插件并自动补全汉化字典（写入 settings.yaml，插件即时生效）。
@@ -796,6 +824,15 @@ var DEFAULT_PLUGINS = {
               h("button", { type: "button", className: "__gh_btn primary", onClick: function () { if (runAiTask) runAiTask("auto", setAiMsg); } }, "自动识别"),
               h("button", { type: "button", className: "__gh_btn", onClick: function () { if (runAiTask) runAiTask("selfcheck", setAiMsg); } }, "AI 自检")),
             aiMsg !== "" ? h("p", { className: "__gh_ai-status" }, aiMsg) : null),
+          // ===== 版本更新（检查更新 / 自动更新）=====
+          // 原理：host 启动与「检查更新」时对比 GitHub 仓库版本；发现新版本自动弹窗确认，
+          // 确认后 host 下载并覆盖插件文件（含备份），完成后提示重启应用。
+          h("div", { className: "__gh_ai" },
+            h("div", { className: "__gh_ai-title" }, "版本更新"),
+            h("p", { className: "__gh_ai-hint" }, ucText),
+            h("div", { className: "__gh_ai-actions" },
+              h("button", { type: "button", className: "__gh_btn", onClick: function () { if (checkUpdate) checkUpdate(); } }, "检查更新"),
+              ucStatus === "update-available" ? h("button", { type: "button", className: "__gh_btn primary", onClick: function () { if (confirmUpdate) confirmUpdate(uc.remoteVersion); } }, "立即更新") : null)),
           h("p", { className: "__gh_note" }, "本插件为常驻插件：应用启动自动加载，配置自动保存到磁盘，刷新或重启后全部自动恢复。"))
           : null,
         tab === "tools" ? h("div", { className: "__gh_section" },
@@ -889,11 +926,12 @@ var DEFAULT_PLUGINS = {
           h("p", null, "· 工具卡片汉化：对话中 AI 工具调用卡片的中文名称与说明；"),
           h("p", null, "· 插件列表汉化：设置 → 插件 → 插件列表的中文名称；"),
           h("p", null, "· 命令面板汉化：/ 命令菜单中每条命令的中文说明（命令名保持英文）；"),
+          h("p", null, "· Agent预设汉化：新会话页与设置中的 Agent 预设显示中文名称与说明（字典在 settings.yaml 的 gui-hanhua.presets 段维护，AI 自动识别也会扫描预设）；"),
           h("p", null, "· 配置持久化：所有修改自动保存到磁盘 settings.yaml；"),
           h("p", null, "· 工具 / 命令 / 插件三个字典页：可搜索、编辑、新增、删除、启用 / 禁用翻译条目；"),
           h("p", null, "· 数据页：导出配置（JSON 备份）、导入配置（整体替换）、恢复默认（还原内置字典）。"),
           h("h4", null, "智能功能（AI 自动识别 / AI 自检）"),
-          h("p", null, "1. 「自动识别」：点击后打开一个新对话，自动向 AI 发送任务——AI 会读取当前已安装但未汉化的插件清单，生成中文名与说明并写入 settings.yaml 的 gui-hanhua 段，完成后插件即时生效；"),
+          h("p", null, "1. 「自动识别」：点击后打开一个新对话，自动向 AI 发送任务——AI 会读取当前已安装但未汉化的插件清单，生成中文名与说明并写入 settings.yaml 的 gui-hanhua 段（插件/工具/命令/Agent 预设全覆盖），完成后插件即时生效；"),
           h("p", null, "2. 「AI 自检」：点击后打开新对话，AI 检查插件注册状态、文件完整性、配置完整性与冲突情况，能直接修复的问题自动修复，其余给出建议；"),
           h("p", null, "3. 注意：两种功能都会消耗 token；AI 写配置文件时需要您在场确认授权；执行结果请切换到新对话查看。"),
           h("h4", null, "常驻与持久化"),
@@ -905,6 +943,10 @@ var DEFAULT_PLUGINS = {
           h("p", null, "· 未翻译的工具 / 插件 / 命令会保持英文原样显示，不会报错；"),
           h("p", null, "· 本插件采用非破坏性低优先级注册，与其他插件的冲突面最小；若某个卡片显示异常，关闭对应开关即可恢复；"),
           h("p", null, "· 插件为开源友好设计：字典、默认配置、界面文案均在源码中集中定义，方便二次开发与自定义。"),
+          h("h4", null, "版本更新"),
+          h("p", null, "1. 插件启动时自动检查 GitHub 仓库版本（也可在设置页点「检查更新」手动触发）；"),
+          h("p", null, "2. 发现新版本会自动弹窗确认，确认后自动下载并覆盖插件文件（覆盖前自动备份 .bak），完成后重启应用生效；"),
+          h("p", null, "3. 状态显示：已是最新版本 / 发现新版本 vX / 本地领先 / 更新中 / 更新完成 / 失败原因。"),
           h("h4", null, "排查问题"),
           h("p", null, "· 卡片没变化：确认「概览」中总开关与对应开关已开启，且字典中存在该工具 / 插件的条目并已启用；"),
           h("p", null, "· 命令面板说明不显示：确认「命令面板汉化」开关开启，且字典中存在该命令条目；"),
@@ -939,6 +981,43 @@ var DEFAULT_PLUGINS = {
       } catch (e) { /* 忽略 */ }
       var scope = ctx.settingsScope.bind({ namespace: "gui-hanhua" });
       var store = createStore();
+      // Agent 预设双语字典：受「Agent预设汉化」开关控制（flags.agentPreset）。
+      // 开启时写入浏览器全局（dsh-client-ui-agent-preset 的 patch 钩子按预设 id 读取），
+      // 关闭时置空（预设显示原数据）；切换开关即时生效。
+      var PRESET_DICT = {
+        "anchored-standard": { name: "锚定标准模式（实验）", description: "以极简预设的真实工具对启动（持久 bash + str_replace_editor），首个持久工具调用或回复后解锁完整标准能力。" },
+        "zero-anchored-standard": { name: "零锚定标准模式（实验）", description: "注入一轮零工具锚定轮（固定用户消息），从下一轮起解锁完整标准工具。" },
+        "router-standard": { name: "路由标准模式（实验）", description: "按任务类型路由——修复走计划（spec），构建走执行（doer）；首个工具调用后解锁完整标准工具。" },
+        "v4-flash-godmode-opencode-go": { name: "Flash 路由（opencode-go）", description: "Flash 专属路由：按任务类型（构建/修复）内部路由，neutral 人设 + 分类引导 + 回顾锚 + 反跑题锚。" },
+        "warmupbetter": { name: "预热增强", description: "预热轮要求模型尽可能长时间预热思维链，并在正式提示词到达前列出自提醒。" },
+        "warmupbetter-replay": { name: "预热增强·回放", description: "第一轮的思维链与回复回放已记录的预热输出，下一轮以完整标准能力运行。" },
+        "whoami-standard": { name: "Whoami 标准（实验）", description: "在空工具面上播种一轮固定的「你是谁」自我介绍，用户首条真实消息后解锁常驻完整能力。" },
+        "minimal-gitbash": { name: "极简模式（Git Bash）", description: "极简模式的 Windows 变体：bash 映射到 Git for Windows 的 bash（MSYS）。" },
+        "minimal-win": { name: "极简模式（Windows）", description: "官方极简模式的 Windows 版：bash 替换为 PowerShell，pwsh + str_replace_editor 双工具。" }
+      };
+      var updatePresetDict = function () {
+        try {
+          var cfgNow = store.get();
+          if (!cfgNow || !cfgNow.flags || cfgNow.flags.agentPreset === false) { globalThis.__guiHanhuaPresetDict = {}; return; }
+          var merged = {};
+          // 1) 内置默认（client）为底
+          for (var k in PRESET_DICT) merged[k] = PRESET_DICT[k];
+          // 2) settings.yaml 的 gui-hanhua.presets 段覆盖/补充（AI 自动识别写入的数据也在这里）
+          var p = cfgNow.presets || {};
+          for (var k2 in p) {
+            var e = p[k2];
+            if (!e || typeof e !== "object") continue;
+            if (e.enabled === false) { delete merged[k2]; continue; }
+            var base = merged[k2] || {};
+            merged[k2] = {
+              name: (typeof e.zh === "string" && e.zh) ? e.zh : (base.name || k2),
+              description: (typeof e.desc === "string" && e.desc) ? e.desc : (base.description || "")
+            };
+          }
+          globalThis.__guiHanhuaPresetDict = merged;
+        } catch (e) { /* 忽略 */ }
+      };
+      updatePresetDict();
       var alive = true;
       var sync = function () {
         if (!alive) return;
@@ -1023,25 +1102,26 @@ var DEFAULT_PLUGINS = {
       };
       var syncAll = function () { syncTools(); syncPluginTab(); syncCommandRows(); };
 
-      // 应用补丁：{ flags?, tools?, plugins?, commands?, _replace?, _reset? }
+      // 应用补丁：{ flags?, tools?, plugins?, commands?, presets?, _replace?, _reset? }
       var applyPatch = function (patch) {
         var cfg = store.get();
         var next;
         if (patch && patch._reset) {
           // 「恢复默认」= 恢复内置默认字典（非清空）
-          next = { flags: { master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true }, tools: DEFAULT_TOOLS, plugins: DEFAULT_PLUGINS, commands: DEFAULT_COMMANDS };
+          next = { flags: { master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true, agentPreset: true }, tools: DEFAULT_TOOLS, plugins: DEFAULT_PLUGINS, commands: DEFAULT_COMMANDS, presets: {} };
         } else if (patch && patch._replace) {
           next = {
-            flags: Object.assign({ master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true }, patch.flags || {}),
+            flags: Object.assign({ master: true, persist: true, toolCards: true, pluginList: true, commandMenu: true, agentPreset: true }, patch.flags || {}),
             tools: shallowClone(patch.tools || {}),
             plugins: shallowClone(patch.plugins || {}),
-            commands: shallowClone(patch.commands || {})
+            commands: shallowClone(patch.commands || {}),
+            presets: shallowClone(patch.presets || {})
           };
         } else {
           next = shallowClone(cfg);
           if (!next || !next.flags) next = normalizeConfig(next, true);
           if (patch && patch.flags) Object.assign(next.flags, patch.flags);
-          ["tools", "plugins", "commands"].forEach(function (section) {
+          ["tools", "plugins", "commands", "presets"].forEach(function (section) {
             var p = patch && patch[section];
             if (!p) return;
             Object.keys(p).forEach(function (k) {
@@ -1065,36 +1145,40 @@ var DEFAULT_PLUGINS = {
             var mergedTools = next.tools;
             var mergedPlugins = next.plugins;
             var mergedCommands = next.commands;
+            var mergedPresets = next.presets;
             if (freshSnap && typeof freshSnap === "object" && !Array.isArray(freshSnap)) {
               // flags：本次 patch 未显式修改的键保留磁盘值（尊重用户之前的选择）
               if (freshSnap.flags && typeof freshSnap.flags === "object") {
                 var patchFlags = (patch && patch.flags) || {};
                 mergedFlags = Object.assign({}, next.flags);
-                ["master", "persist", "toolCards", "pluginList"].forEach(function (k) {
+                ["master", "persist", "toolCards", "pluginList", "commandMenu", "agentPreset"].forEach(function (k) {
                   if (!(k in patchFlags) && freshSnap.flags[k] !== undefined) mergedFlags[k] = !!freshSnap.flags[k];
                 });
               }
               // 字典：磁盘为底 + 本次结果覆盖；本次显式删除（null）的键除外
-              var mergeSection = function (freshPart, nextPart) {
+              var mergeSection = function (sectionName, freshPart, nextPart) {
                 var base = Object.assign({}, freshPart && typeof freshPart === "object" && !Array.isArray(freshPart) ? freshPart : {});
                 Object.keys(nextPart || {}).forEach(function (k) { base[k] = nextPart[k]; });
-                if (patch && patch[nextPart === next.tools ? "tools" : (nextPart === next.plugins ? "plugins" : "commands")]) {
-                  Object.keys(patch[nextPart === next.tools ? "tools" : (nextPart === next.plugins ? "plugins" : "commands")]).forEach(function (k) {
-                    if (patch[nextPart === next.tools ? "tools" : (nextPart === next.plugins ? "plugins" : "commands")][k] === null) delete base[k];
-                  });
+                var p = patch && patch[sectionName];
+                if (p) {
+                  Object.keys(p).forEach(function (k) { if (p[k] === null) delete base[k]; });
                 }
                 return base;
               };
-              mergedTools = mergeSection(freshSnap.tools, next.tools);
-              mergedPlugins = mergeSection(freshSnap.plugins, next.plugins);
-              mergedCommands = mergeSection(freshSnap.commands, next.commands);
+              mergedTools = mergeSection("tools", freshSnap.tools, next.tools);
+              mergedPlugins = mergeSection("plugins", freshSnap.plugins, next.plugins);
+              mergedCommands = mergeSection("commands", freshSnap.commands, next.commands);
+              mergedPresets = mergeSection("presets", freshSnap.presets, next.presets);
             }
             scope.set("flags", mergedFlags);
             scope.set("tools", mergedTools);
             scope.set("plugins", mergedPlugins);
             scope.set("commands", mergedCommands);
+            scope.set("presets", mergedPresets);
           } catch (e) { console.error("[gui-hanhua] 保存配置失败:", e); }
         }
+        // 预设字典同步（开关切换 / 字典变化即时生效）
+        try { updatePresetDict(); } catch (e) { /* 忽略 */ }
         return Promise.resolve({ ok: true });
       };
 
@@ -1107,16 +1191,19 @@ var DEFAULT_PLUGINS = {
       var buildAutoPrompt = function (unlocalized) {
         var list = unlocalized && unlocalized.length > 0 ? unlocalized.join("\n") : "（当前暂未发现未汉化插件，请自行扫描）";
         return "【GUI 自动汉化任务】\n" +
-          "请帮助汉化 DeepSeek Harness 的界面信息（插件名 / 工具名 / 命令说明）。\n" +
+          "请帮助汉化 DeepSeek Harness 的界面信息（插件名 / 工具名 / 命令说明 / Agent 预设）。\n" +
           "当前已安装但尚未汉化的插件/工具（英文原名）：\n" + list + "\n\n" +
           "请执行：\n" +
           "1. 先确认 DSH 配置目录：运行命令 `echo $env:USERPROFILE` 得到用户目录，DSH 配置目录即 <用户目录>\\.dsh（Linux/macOS 为 ~/.dsh）。\n" +
-          "2. 读取 <DSH配置目录>\\settings.yaml 中 gui-hanhua 段的 tools / plugins / commands 字典，了解已有条目的格式（zh / desc / enabled）。\n" +
+          "2. 读取 <DSH配置目录>\\settings.yaml 中 gui-hanhua 段的 tools / plugins / commands / presets 字典，了解已有条目的格式（zh / desc / enabled）。\n" +
           "3. 为上一步列出的每个未汉化条目设计简短中文名（zh）与一句话中文说明（desc）。\n" +
           "4. 将新增条目写入 settings.yaml 对应的段（插件→plugins，工具→tools，命令→commands），保持 YAML 缩进与现有条目一致。\n" +
-          "5. 若无法直接写该文件（沙箱/权限），请明确请求用户授权后重试。\n" +
-          "6. 完成后简要汇报：新增了多少条汉化。\n\n" +
-          "注意：命令名/工具名本身保持英文不变，只汉化显示名称与说明；不要修改 settings.yaml 中其他插件的配置。";
+          "5. 额外任务——Agent 预设汉化：扫描 <DSH配置目录>\\.agent-presets\\ 目录下所有预设（每个子目录的 preset.yml 含 name / description / order），" +
+          "对照 settings.yaml 的 gui-hanhua.presets 段（zh / desc / enabled 格式），为 name 或 description 仍为英文（或缺失条目）的预设设计中文名（zh）与中文说明（desc），" +
+          "写入 gui-hanhua.presets 段（enabled: true，保持 YAML 格式）。\n" +
+          "6. 若无法直接写该文件（沙箱/权限），请明确请求用户授权后重试。\n" +
+          "7. 完成后简要汇报：新增了多少条汉化（插件 / 工具 / 命令 / 预设分别多少）。\n\n" +
+          "注意：命令名/工具名/预设 id 本身保持英文不变，只汉化显示名称与说明；不要修改 settings.yaml 中其他插件的配置。";
       };
       var buildSelfCheckPrompt = function () {
         return "【GUI 汉化插件自检任务】\n" +
@@ -1124,10 +1211,12 @@ var DEFAULT_PLUGINS = {
           "1. 先确认 DSH 配置目录：运行 `echo $env:USERPROFILE` 得到用户目录，DSH 配置目录即 <用户目录>\\.dsh（Linux/macOS 为 ~/.dsh）。\n" +
           "2. 读取 <DSH配置目录>\\profiles\\web-desktop\\cordis.patch.yml 与 <DSH配置目录>\\profiles\\web\\cordis.patch.yml，确认 gui-hanhua 注册存在且 disabled 为 false。\n" +
           "3. 检查 <DSH配置目录>\\profiles\\web-desktop\\node_modules\\dsh-gui-hanhua\\ 与 <DSH配置目录>\\profiles\\web\\node_modules\\dsh-gui-hanhua\\ 的文件完整性（client.js / index.js / package.json / vendor/ 是否存在且编码正常）。\n" +
-          "4. 检查 <DSH配置目录>\\settings.yaml 中 gui-hanhua 段：flags（master/persist/toolCards/pluginList/commandMenu）、tools、plugins、commands 是否完整，master 是否为 true。\n" +
-          "5. 检查插件是否有明显的冲突或配置损坏（例如注册被禁用、文件缺失、字典为空）。\n" +
-          "6. 发现问题：说明原因并给出修复建议；能直接修复的（如配置字段缺失）请直接修复（若需权限请先请求）。\n" +
-          "7. 完成汇报：插件状态 + 发现的问题 + 已修复内容。";
+          "4. 检查 <DSH配置目录>\\settings.yaml 中 gui-hanhua 段：flags（master/persist/toolCards/pluginList/commandMenu/agentPreset）、tools、plugins、commands、presets 是否完整，master 是否为 true。\n" +
+          "5. 检查 gui-hanhua.presets 段：是否存在、条目格式（zh / desc / enabled）是否完整、与 <DSH配置目录>\\.agent-presets\\ 目录下的预设是否匹配（缺少条目或存在多余条目）。\n" +
+          "6. 检查 <DSH配置目录>\\.agent-presets\\ 下各预设的 preset.yml 编码是否正常（UTF-8、无乱码、可正常解析）。\n" +
+          "7. 检查插件是否有明显的冲突或配置损坏（例如注册被禁用、文件缺失、字典为空）。\n" +
+          "8. 发现问题：说明原因并给出修复建议；能直接修复的（如配置字段缺失、presets 段补全）请直接修复（若需权限请先请求）。\n" +
+          "9. 完成汇报：插件状态 + 发现的问题 + 已修复内容。";
       };
       // 发送提示词到指定会话（多路径容错）：
       //   路径1：binding.session.prompt(...) 直调（conversation.sendSession 内部同款）
@@ -1237,11 +1326,28 @@ var DEFAULT_PLUGINS = {
         }
       };
 
+      // ===== 版本更新（检查 / 确认自动更新）=====
+      // 原理：host 端负责下载与覆盖文件（Node 可写盘）；client 端只通过 settings 通道
+      // 传递意图——写 updateCheck.trigger 触发 host 检查，写 confirmAt/confirmVersion 确认更新。
+      // host 把检查/更新结果写回 updateCheck.status，client 读取展示并弹窗。
+      var requestUpdateCheck = function () {
+        try {
+          var uc = (store.get().updateCheck && typeof store.get().updateCheck === "object") ? store.get().updateCheck : {};
+          scope.set("updateCheck", Object.assign({}, uc, { trigger: Date.now() }));
+        } catch (e) { console.error("[gui-hanhua] 触发版本检查失败:", e); }
+      };
+      var confirmUpdate = function (version) {
+        try {
+          var uc = (store.get().updateCheck && typeof store.get().updateCheck === "object") ? store.get().updateCheck : {};
+          scope.set("updateCheck", Object.assign({}, uc, { confirmAt: Date.now(), confirmVersion: version }));
+        } catch (e) { console.error("[gui-hanhua] 确认更新失败:", e); }
+      };
+
       // 注册设置页（入口名：GUI汉化设置）
       try {
         slots.inject("settings.section", function () {
           return slots.register({ name: "settings.section", id: "gui-hanhua", order: 90, label: function () { return "GUI汉化设置"; } }, function (props) {
-            return h(ErrorBoundary, { fallback: SAFE_FALLBACK }, h(SettingsSection, Object.assign({}, props, { store: store, applyPatch: applyPatch, listInventory: listInventory, runAiTask: runAiTask })));
+            return h(ErrorBoundary, { fallback: SAFE_FALLBACK }, h(SettingsSection, Object.assign({}, props, { store: store, applyPatch: applyPatch, listInventory: listInventory, runAiTask: runAiTask, checkUpdate: requestUpdateCheck, confirmUpdate: confirmUpdate })));
           });
         });
       } catch (e) { console.error("[gui-hanhua] 设置页注册失败:", e); }
