@@ -913,6 +913,11 @@ var DEFAULT_PLUGINS = {
     function HelpPanel() {
       return h("div", { className: "__gh_section" },
         h("div", { className: "__gh_help" },
+          // GitHub 仓库直达入口（开源仓库：欢迎 Star / Issue / PR）
+          h("h4", null, "📦 GitHub 仓库"),
+          h("p", null,
+            h("a", { href: "https://github.com/XIZRSAMS/dsh-gui-hanhua", target: "_blank", rel: "noopener", style: { color: "var(--dsw-alias-brand-primary)", textDecoration: "underline", textUnderlineOffset: "2px" } }, "github.com/XIZRSAMS/dsh-gui-hanhua"),
+            " —— 开源项目，欢迎 Star ⭐、提交 Issue 与 Pull Request；更新日志与历史版本可在仓库查看。"),
           h("h4", null, "如何打开本插件"),
           h("p", null, "点击左侧边栏底部的「设置」（齿轮图标）→ 在设置面板左侧找到「GUI汉化设置」并点击，即可进入本插件的管理页。"),
           h("h4", null, "本插件做了什么"),
