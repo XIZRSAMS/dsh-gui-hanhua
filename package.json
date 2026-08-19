@@ -1,7 +1,7 @@
 {
   "name": "dsh-gui-hanhua",
-  "version": "1.0.0",
-  "description": "GUI可视信息汉化 V1.0 —— DeepSeek Harness 界面信息汉化插件（常驻版）",
+  "version": "1.1.0",
+  "description": "GUI可视信息汉化 V1.1 —— DeepSeek Harness 界面信息汉化插件（常驻版）",
   "type": "module",
   "main": "index.js",
   "exports": {
@@ -10,7 +10,6 @@
     "./package.json": "./package.json"
   },
   "dsh": {
-    "bundle": { "patch": "./cordis.patch.yml" },
     "client": {
       "platform": "web"
     }
@@ -18,8 +17,7 @@
   "files": [
     "index.js",
     "client.js",
-    "vendor",
-    "cordis.patch.yml"
+    "vendor"
   ],
   "license": "MIT"
 }
