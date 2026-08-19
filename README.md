@@ -64,6 +64,12 @@
 
 <img src="./assets/permission.png" alt="权限选择器双语" width="400"/>
 
+<br/><br/>
+
+**Agent 预设汉化** —— 预设名称与说明显示中文（anchored-standard → 锚定标准模式（实验））
+
+<img src="./assets/agent-preset.png" alt="Agent 预设汉化" width="480"/>
+
 </div>
 
 ---
